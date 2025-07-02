@@ -1,5 +1,58 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+==================================================================================
+                            TRIGGERED DATA ACQUISITION
+==================================================================================
+
+This script waits for external triggers and saves camera images when triggered.
+
+==================================================================================
+                                SETTINGS
+==================================================================================
+
+BASIC SETTINGS (Lines 130-132):
+-------------------------------
+N = 100                # Number of images to record
+filename = 'ts'        # Output filename prefix (date will be appended)
+directory = './'       # Output directory path
+
+BASIC OPERATION:
+1. Set N (number of triggers to record)
+2. Set filename and directory
+3. Run: python acquire_Nshots.py
+4. Script waits for triggers and records data automatically
+5. Press Ctrl+C to stop early
+
+ANALYSIS: After acquisition, analyze with spectrum.py
+
+==================================================================================
+                              DATA COLLECTION
+==================================================================================
+
+OPERATION:
+- Waits for triggers from external source
+- When triggered, saves camera image and all diagnostic PVs
+- Continues until N shots collected or stopped manually
+
+OUTPUT FILE:
+- HDF5 format: "filename-YYYY-MM-DD.h5" (with automatic numbering)
+
+==================================================================================
+                            SCRIPT REQUIREMENTS
+==================================================================================
+
+NOTE: This script only records data - it does not control experimental parameters.
+
+PYTHON DEPENDENCIES:
+- epics (PyEpics)
+- h5py
+- numpy
+- p4p (for PVA camera interface)
+
+==================================================================================
+"""
+
 # Created on Sunday Dec 15, 2024
 # Author @ Chris Niemann
 

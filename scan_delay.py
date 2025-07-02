@@ -1,5 +1,73 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+==================================================================================
+                            BNC DELAY SCAN ACQUISITION
+==================================================================================
+
+This script scans BNC delay values by moving the BNC delay generator through
+different timing values. It takes triggered shots at each delay position.
+
+NOTE: The BNC delay generator is getting trigger from the discharge voltage, not the usual plasma 1 kA.
+This is necessary for both laser and camera to operate properly.
+
+==================================================================================
+                                SETTINGS
+==================================================================================
+
+BASIC SETTINGS (Lines 202-205):
+-----------------------------
+filename = 'test'                                    # Output filename prefix
+directory = './'                                     # Output directory path  
+delays = np.round(np.arange(0., 0.03, 0.002), 3)     # Delay range in seconds
+repetitions = 1                                      # shots per delay
+
+TYPICAL DELAY SCAN SETUP:
+delays = np.round(np.arange(0.000, 0.030, 0.002), 3)
+repetitions = 10
+
+BASIC OPERATION:
+1. Set delays array (start, stop, step)
+2. Set repetitions per delay point
+3. Set filename and directory
+4. Run: python scan_delay.py
+5. Monitor console for scan progress
+6. Press Ctrl+C to stop early if needed
+
+ANALYSIS: After acquisition, analyze with spectrum.py
+
+==================================================================================
+                              DATA COLLECTION
+==================================================================================
+
+SCAN SEQUENCE:
+1. Initialize BNC delay to first value
+2. Wait for BNC to settle (within 0.1% tolerance)
+3. Take background shot (even shot number)
+4. Take signal shot (odd shot number)  
+5. Repeat for all repetitions at this delay
+6. Move to next delay value
+7. Repeat until all delays completed
+
+OUTPUT FILE:
+- HDF5 format: "filename-YYYY-MM-DD.h5" (with automatic numbering)
+- Contains actionlist group with delay information
+
+==================================================================================
+                            SCRIPT REQUIREMENTS
+==================================================================================
+
+BNC CONSIDERATIONS:
+- Check BNC TRIG IN
+
+PYTHON DEPENDENCIES:
+- epics (PyEpics)
+- h5py  
+- numpy
+- p4p (for PVA camera interface)
+
+==================================================================================
+"""
 
 # pip install pvapy --break-system-packages
 # https://bctwg.readthedocs.io/en/latest/source/demo/doc.demo.example_01.html

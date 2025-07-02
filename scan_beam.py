@@ -1,5 +1,71 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+==================================================================================
+                      THOMSON SCATTERING BEAM POSITION SCAN ACQUISITION
+==================================================================================
+
+This script performs beam position scanning for Thomson scattering measurements by
+varying the fiber collection position using Motor12. It systematically steps through
+different fiber positions to find optimal beam-plasma overlap.
+
+==================================================================================
+                                SETTINGS
+==================================================================================
+
+BASIC SETTINGS (Lines 70-73):
+-----------------------------
+filename = 'test'                                      # Output filename prefix
+directory = './'                                       # Output directory path
+positions = np.round(np.arange(0.34, 0.38, 0.01), 3)   # Scan Position range in cm
+repetitions = 1                                        # shots per position
+
+TYPICAL BEAM POSITION SCAN SETUP:
+positions = np.round(np.arange(0.30, 0.44, 0.02), 3)
+repetitions = 10
+
+
+BASIC OPERATION:
+1. Set positions array (start, stop, step)
+2. Set repetitions per position
+3. Set filename and directory
+4. Run: python scan_beam.py
+5. Monitor console for scan progress
+6. Press Ctrl+C to stop early if needed
+
+ANALYSIS: After acquisition, analyze with spectrum.py
+==================================================================================
+                              DATA COLLECTION
+==================================================================================
+
+SCAN SEQUENCE:
+1. Initialize Motor12 to first position
+2. Wait for motor to settle (within 0.1% tolerance)
+3. Take background shot (even shot number)
+4. Take signal shot (odd shot number)
+5. Repeat for all repetitions at this position
+6. Move to next position
+7. Repeat until all positions completed
+
+OUTPUT FILE:
+- HDF5 format: "filename-YYYY-MM-DD.h5" (with automatic numbering)
+- Contains actionlist group with position information
+
+==================================================================================
+                            SCRIPT REQUIREMENTS
+==================================================================================
+
+MOTOR CONSIDERATIONS:
+- Check motor limits to avoid collisions
+
+PYTHON DEPENDENCIES:
+- epics (PyEpics)
+- h5py
+- numpy
+- p4p (for PVA camera interface)
+
+==================================================================================
+"""
 
 # pip install pvapy --break-system-packages
 # https://bctwg.readthedocs.io/en/latest/source/demo/doc.demo.example_01.html

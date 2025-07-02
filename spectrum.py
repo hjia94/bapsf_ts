@@ -177,16 +177,16 @@ def analyze_spectrum(filename, delay_value=None, position_value=None, debug=Fals
     else:
         # Use all shots for acquire_Nshots data
         shot_range = range(0, total_shots, 2)
-    
+
     # Process images
     profile = np.zeros(512, dtype=float)
     average_profile = np.zeros(512, dtype=float)
     valid_pairs = 0
-    
+
     for i in range(0, len(shot_range), 2):
         if i+1 >= len(shot_range):
             break
-            
+
         n_bg = shot_range[i]
         n_signal = shot_range[i+1]
         
