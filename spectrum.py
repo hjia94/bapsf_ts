@@ -189,6 +189,17 @@ def analyze_spectrum(filename, delay_value=None, position_value=None, debug=Fals
         try:
             bg = np.asarray(file.get(f"/13PICAM1:Pva1:Image/image {n_bg}")).astype(float)
             image = np.asarray(file.get(f"/13PICAM1:Pva1:Image/image {n_signal}")).astype(float)
+            
+            # Check if images have the expected 2D shape
+            if bg.ndim != 2 or image.ndim != 2:
+                print(f"Skipping pair ({n_bg}, {n_signal}) - images not 2D (bg: {bg.shape}, image: {image.shape})")
+                continue
+                
+            # Check if images have expected dimensions (should be 2D array)
+            if bg.shape[1] != 512 or image.shape[1] != 512:
+                print(f"Skipping pair ({n_bg}, {n_signal}) - unexpected image dimensions (bg: {bg.shape}, image: {image.shape})")
+                continue
+                
         except Exception as e:
             print(f"Skipping pair ({n_bg}, {n_signal}) due to read error: {e}")
             continue
@@ -212,6 +223,11 @@ def analyze_spectrum(filename, delay_value=None, position_value=None, debug=Fals
         print("No valid shot pairs found")
         return None
     
+    # Check if we have enough valid pairs for reliable analysis
+    if valid_pairs < 2:
+        print(f"Only {valid_pairs} valid shot pair(s) found - insufficient data for reliable analysis")
+        return None
+    
     # Normalize
     average_profile /= valid_pairs
     average_profile *= (-1)  # flip sign
@@ -233,6 +249,11 @@ def analyze_spectrum(filename, delay_value=None, position_value=None, debug=Fals
     mask[27:33] = False  # Exclude central region
     
     try:
+        # Check if we have enough data points for fitting
+        if np.sum(mask) < 10:
+            print(f"Insufficient data points for Gaussian fitting (only {np.sum(mask)} valid points)")
+            return None
+            
         popt, cov = optimize.curve_fit(
             gaussian, 
             supersuperbinned_wavelength[mask], 
@@ -366,12 +387,23 @@ def analyze_scan_delay(ifn, debug=False, debug_mode="full"):
     
     # Analyze each delay
     results = {}
+    skipped_delays = []
     for delay in unique_delays:
         print(f"\nAnalyzing delay {delay*1000:.1f} ms...")
         result = analyze_spectrum(ifn, delay_value=delay, debug=debug, debug_mode=debug_mode)
         if result is not None:
             results[delay] = result
             print(f"  Te = {result['Te']:.2f} eV, ne = {result['ne']:.2f} ×10¹³ cm⁻³")
+        else:
+            skipped_delays.append(delay)
+            print(f"  SKIPPED - No valid data for this delay")
+    
+    # Print summary of skipped delays
+    if skipped_delays:
+        print(f"\nSkipped {len(skipped_delays)} delays due to incomplete data:")
+        for delay in skipped_delays:
+            print(f"  - {delay*1000:.1f} ms")
+        print(f"Successfully processed {len(results)} delays")
     
     return results
 
@@ -391,6 +423,11 @@ def process_scan_delay_data(ifn, debug=False):
     # Use gaussian_only mode for debug to collect plot data
     debug_mode = "gaussian_only" if debug else "full"
     results = analyze_scan_delay(ifn, debug=debug, debug_mode=debug_mode)
+    
+    # Check if any delays were successfully processed
+    if not results:
+        print("\nERROR: No delays could be processed. The data file may be corrupted or incomplete.")
+        return
     
     # Create debug plot with all Gaussian fits if debug=True
     if debug and len(results) > 1:
@@ -431,7 +468,11 @@ def process_scan_delay_data(ifn, debug=False):
         plt.show(block=False)
     
     # Plot results vs delay
-    if len(results) > 1:
+    if len(results) == 1:
+        print("\nOnly one delay was successfully processed - skipping time evolution plots")
+        delay, result = list(results.items())[0]
+        print(f"Delay {delay*1000:.1f} ms: Te = {result['Te']:.2f} eV, ne = {result['ne']:.2f} ×10¹³ cm⁻³")
+    elif len(results) > 1:
         delays = []
         Te_values = []
         Tmax_values = []
@@ -449,9 +490,12 @@ def process_scan_delay_data(ifn, debug=False):
         fig, (ax1, ax2) = plt.subplots(2, 1, dpi=150)
         
         # Temperature plot
+        # Calculate error bars, ensuring they are always positive
+        yerr_lower = np.maximum(0, np.array(Te_values) - np.array(Tmin_values))
+        yerr_upper = np.maximum(0, np.array(Tmax_values) - np.array(Te_values))
+        
         ax1.errorbar(delays, Te_values, 
-                   yerr=[np.array(Te_values) - np.array(Tmin_values),
-                         np.array(Tmax_values) - np.array(Te_values)],
+                   yerr=[yerr_lower, yerr_upper],
                    fmt='o-', capsize=5, capthick=2, markersize=8)
         ax1.set_xlabel('Delay (ms)')
         ax1.set_ylabel('Electron Temperature (eV)')
@@ -748,7 +792,7 @@ def process_scan_beam_data(ifn, debug=False):
 
 if __name__ == "__main__":
     # Configuration
-    ifn = r"D:\data\LAPD\TS\hotter500shot-2025-06-25_1.h5"
+    ifn = r"D:\data\LAPD\TS\3s_90V_91vpuff_1kG_4to20ms_1msdelt_RFON-2025-07-07.h5"
     
     # Check if this is scan_delay data, scan_beam data, or single delay data
     try:
